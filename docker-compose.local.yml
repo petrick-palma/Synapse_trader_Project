@@ -1,0 +1,44 @@
+# --- Docker Compose (Desenvolvimento Local) ---
+# Ficheiro: docker-compose.local.yml
+# Executar com: docker-compose -f docker-compose.local.yml up -d
+
+version: "3.9"
+
+# Define uma âncora YAML para o serviço base
+x-base-service: &base-service
+  build:
+    context: . # Usa o Dockerfile na raiz
+  env_file:
+    - .env     # Carrega as variáveis do ficheiro .env
+  volumes:
+    - .:/app   # Mapeia o código local para dentro do contentor (hot-reload)
+  depends_on:
+    - redis    # Garante que o Redis inicia primeiro
+
+services:
+  # 1. Redis (Substitui Pub/Sub e Firestore localmente)
+  redis:
+    image: "redis:7-alpine"
+    ports:
+      - "6379:6379" # Expõe o Redis para debug (ex: RedisInsight)
+
+  # 2. Serviço API (Dashboard FastAPI)
+  api:
+    <<: *base-service # Herda do base-service
+    command: uvicorn run_api:app --host 0.0.0.0 --port 8080 --reload
+    ports:
+      - "8000:8080" # Mapeia a porta 8080 do contentor para 8000 no host
+    restart: always
+
+  # 3. Serviço de Trading (Core HFT)
+  trading_bot:
+    <<: *base-service # Herda do base-service
+    command: python run_trading.py
+    restart: always
+    # (Não precisa de 'ports' pois só comunica internamente via Redis)
+
+  # 4. Serviço Worker (Otimização, Treino, Alertas)
+  worker:
+    <<: *base-service # Herda do base-service
+    command: python run_worker.py
+    restart: always

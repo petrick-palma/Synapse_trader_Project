@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synapse Trader - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+</head>
+<body>
+
+    <h1>Synapse Trader <span id="status-indicator"></span></h1>
+    <p>Status: <b id="status-text">A carregar...</b></p>
+
+    <div class="container">
+        
+        <div class="column">
+            <h2>Posições Abertas</h2>
+            <table id="positions-table">
+                <thead>
+                    <tr>
+                        <th>Símbolo</th>
+                        <th>Lado</th>
+                        <th>Qtd.</th>
+                        <th>Preço Entrada</th>
+                        <th>Stop Loss</th>
+                        <th>P/L (Real-Time)</th>
+                    </tr>
+                </thead>
+                <tbody id="positions-tbody">
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="column">
+            <h2>Histórico Recente (Últimos 50)</h2>
+            <table id="history-table">
+                <thead>
+                    <tr>
+                        <th>Data Saída</th>
+                        <th>Símbolo</th>
+                        <th>Lado</th>
+                        <th>P/L ($ / %)</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody">
+                    </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script src="{{ url_for('static', path='/js/app.js') }}"></script>
+</body>
+</html>

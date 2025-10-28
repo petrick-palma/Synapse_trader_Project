@@ -1,0 +1,50 @@
+# --- docker-compose.yml (Plano de Deploy para Produção/GCP) ---
+# Este ficheiro define os 3 serviços principais do Synapse Trader.
+# As variáveis de ambiente (BINANCE_API_KEY, etc.) NÃO estão aqui,
+# pois serão injetadas pelo Google Secret Manager no Cloud Run.
+
+version: '3.8'
+
+services:
+  # Serviço 1: A API (Servidor Web)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${REGIAO}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPO_NAME}/synapse-api:latest
+    command: uvicorn synapse_trader.api.main:app --host 0.0.0.0 --port 8080
+    # O Cloud Run exige que a porta 8080 seja a porta de escuta
+    ports:
+      - "8080:8080" 
+    environment:
+      # A flag GCP é CRÍTICA para usar Pub/Sub, Firestore e Secret Manager
+      - EXECUTION_ENVIRONMENT=GCP
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+    # Recomendamos a política 'always' no Cloud Run (para serviços em background)
+    restart: always 
+
+  # Serviço 2: O Bot de Trading (Core 24/7)
+  trading:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${REGIAO}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPO_NAME}/synapse-trading:latest
+    command: python run_trading.py
+    environment:
+      - EXECUTION_ENVIRONMENT=GCP
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+    restart: always
+    # O trading precisa do Analyst/Optimizer para obter parâmetros
+    # Mas como são serviços separados no Cloud Run, a comunicação é via Pub/Sub (assíncrona)
+
+  # Serviço 3: O Worker (Otimização/IA)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${REGIAO}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPO_NAME}/synapse-worker:latest
+    command: python run_worker.py
+    environment:
+      - EXECUTION_ENVIRONMENT=GCP
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+    restart: always

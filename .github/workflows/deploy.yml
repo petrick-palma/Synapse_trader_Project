@@ -1,0 +1,49 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  PROJECT_ID: 'synapse-trader-project'
+  REGION: 'southamerica-east1'
+  SERVICE: 'synapse-trader-api'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Google Auth
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: 'projects/734380351147/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+        service_account: 'github-actions@synapse-trader-project.iam.gserviceaccount.com'
+
+    - name: Set up GCloud
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker
+      run: |
+        gcloud auth configure-docker southamerica-east1-docker.pkg.dev --quiet
+
+    - name: Build and Push
+      run: |
+        docker build -t southamerica-east1-docker.pkg.dev/synapse-trader-project/synapse-trader-repo/synapse-trader-api:${{ github.sha }} .
+        docker push southamerica-east1-docker.pkg.dev/synapse-trader-project/synapse-trader-repo/synapse-trader-api:${{ github.sha }}
+
+    - name: Deploy
+      run: |
+        gcloud run deploy synapse-trader-api \
+          --image southamerica-east1-docker.pkg.dev/synapse-trader-project/synapse-trader-repo/synapse-trader-api:${{ github.sha }} \
+          --region southamerica-east1 \
+          --platform managed \
+          --allow-unauthenticated \
+          --port 8080 \
+          --timeout 300

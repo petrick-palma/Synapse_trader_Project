@@ -1,0 +1,8 @@
+# Ignorar todos os ficheiros nesta pasta, exceto este .gitignore
+*
+!.gitignore
+
+# Ignorar caches e logs específicos de ML
+*.h5
+*.joblib
+*.p

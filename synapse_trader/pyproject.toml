@@ -1,0 +1,16 @@
+# pyproject.toml
+
+[tool.isort]
+profile = "black"
+# Adicionar a pasta 'synapse_trader' como um pacote local
+known_local_folder = ["synapse_trader"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.pylance]
+# Forçar o Pylance a adicionar a pasta atual (raiz) ao PATH para resolver
+# 'synapse_trader.xpto' corretamente.
+venvPath = "."
+extraPaths = ["./synapse_trader"]

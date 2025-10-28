@@ -1,0 +1,3 @@
+# Ignorar todos os ficheiros nesta pasta, exceto este .gitignore
+*
+!.gitignore
