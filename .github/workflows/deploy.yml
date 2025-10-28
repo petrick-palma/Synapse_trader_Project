@@ -1,4 +1,4 @@
-name: Deploy to Cloud Run
+name: Deploy to Google Cloud Run
 
 on:
   push:
@@ -8,6 +8,7 @@ env:
   PROJECT_ID: 'synapse-trader-project'
   REGION: 'southamerica-east1'
   SERVICE: 'synapse-trader-api'
+  REPOSITORY: 'synapse-trader-repo'
 
 jobs:
   deploy:
@@ -17,33 +18,46 @@ jobs:
       id-token: 'write'
 
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Google Auth
+      id: auth
       uses: google-github-actions/auth@v2
       with:
         workload_identity_provider: 'projects/734380351147/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
         service_account: 'github-actions@synapse-trader-project.iam.gserviceaccount.com'
+        create_credentials_file: true
 
-    - name: Set up GCloud
+    - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ env.PROJECT_ID }}
 
-    - name: Configure Docker
+    - name: Configure Docker for Artifact Registry
       run: |
-        gcloud auth configure-docker southamerica-east1-docker.pkg.dev --quiet
+        gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-    - name: Build and Push
+    - name: Build Docker image
       run: |
-        docker build -t southamerica-east1-docker.pkg.dev/synapse-trader-project/synapse-trader-repo/synapse-trader-api:${{ github.sha }} .
-        docker push southamerica-east1-docker.pkg.dev/synapse-trader-project/synapse-trader-repo/synapse-trader-api:${{ github.sha }}
+        docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} .
 
-    - name: Deploy
+    - name: Push Docker image
       run: |
-        gcloud run deploy synapse-trader-api \
-          --image southamerica-east1-docker.pkg.dev/synapse-trader-project/synapse-trader-repo/synapse-trader-api:${{ github.sha }} \
-          --region southamerica-east1 \
+        docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
+
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy ${{ env.SERVICE }} \
+          --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} \
+          --region ${{ env.REGION }} \
           --platform managed \
           --allow-unauthenticated \
           --port 8080 \
-          --timeout 300
+          --timeout 300 \
+          --memory 512Mi
+
+    - name: Show Service URL
+      run: |
+        echo "Service deployed successfully!"
+        gcloud run services describe ${{ env.SERVICE }} --region ${{ env.REGION }} --format="value(status.url)"
